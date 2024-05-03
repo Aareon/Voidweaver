@@ -33,7 +33,7 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// Fantasy Library
-	modImplementation "xyz.nucleoid:fantasy:${project.fantasy_version}"
+	include modImplementation ("xyz.nucleoid:fantasy:${project.fantasy_version}")
 }
 
 processResources {
