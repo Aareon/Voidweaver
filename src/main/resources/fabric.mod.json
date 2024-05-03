@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "voidweaver",
+	"version": "${version}",
+	"name": "VoidWeaver",
+	"description": "A Fabric server-side mod for creating new void dimensions for whatever you want",
+	"authors": [
+		"Aareon"
+	],
+	"contact": {
+		"homepage": "https://aareon.pro/",
+		"sources": "https://github.com/Aareon/VoidWeaver",
+		"issues": "https://github.com/Aareon/VoidWeaver/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/voidweaver/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.aareon.VoidWeaver.VoidWeaver"
+		],
+		"fabric-datagen": [
+			"io.github.aareon.VoidWeaverDataGenerator"
+		]
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.modrinth": "https://modrinth.com/mod/VoidWeaver",
+				"modmenu.kofi": "https://ko-fi.com/Aareon"
+			}
+		}
+	},
+	"mixins": [
+		"voidweaver.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.15.10",
+		"minecraft": "~1.20.4",
+		"java": ">=17",
+		"fabric-api": ">=0.97.0"
+	}
+}
