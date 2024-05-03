@@ -1,22 +1,25 @@
 package io.github.aareon.VoidWeaver;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.ArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.block.Blocks;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.dimension.DimensionTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.fantasy.RuntimeWorldHandle;
 import xyz.nucleoid.fantasy.util.VoidChunkGenerator;
+import net.minecraft.registry.RegistryKeys;
 
 import java.util.Objects;
 
@@ -24,87 +27,95 @@ import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class VoidWeaverCommands {
+    private static final Logger LOGGER = LoggerFactory.getLogger("voidweaver");
+
     public static void registerCommands() {
+        // Command registration
+        LOGGER.info("Registering commands for VoidWeaver");
+
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(literal("voidweaver")
-                .then(literal("test")
-                        .requires(source -> source.hasPermissionLevel(2))
-                        // Command to test if mod is working
-                        .executes(context -> {
-                            ServerPlayerEntity player = Objects.requireNonNull(context.getSource().getPlayer());
-                            String playerName = player.getName().getLiteralString();
+                .then(registerTestCommand())
+                .then(registerNewDimensionCommand())
+                .then(registerJumpCommand())));
+    }
 
+    private static ArgumentBuilder<ServerCommandSource, ?> registerTestCommand() {
+        return literal("test")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(context -> testMod(context.getSource()));
+    }
 
-                            try {
-                                context.getSource().sendFeedback(() ->
-                                        Text.literal("@%s §cVoidweaver§r is working".formatted(playerName)
-                                        ), true);
-                                //player.sendMessage(Text.literal("VoidWeaver is working!"), true);
-                            } catch (Exception e) {
-                                context.getSource().sendFeedback(() ->
-                                        Text.literal("Something went wrong with §cVoidweaver§r @%s".formatted(playerName)
-                                        ), true);
-                                //player.sendMessage(Text.literal("Something is wrong with VoidWeaver!").formatted(Formatting.RED, Formatting.BOLD), true);
-                                return 1;
-                            }
-                            return 0;
-                        }))
-
-                .then(literal("new")
-                        .then(argument("dimensionNamespace", StringArgumentType.string())
+    private static ArgumentBuilder<ServerCommandSource, ?> registerNewDimensionCommand() {
+        return literal("new")
+                .then(argument("dimensionNamespace", StringArgumentType.string())
                         .then(argument("dimensionName", StringArgumentType.string())
                                 .requires(source -> source.hasPermissionLevel(2))
                                 .executes(context -> {
-                                    final String dimensionNamespace = StringArgumentType.getString(context, "dimensionNamespace");
-                                    final String dimensionName = StringArgumentType.getString(context, "dimensionName");
+                                    String dimensionNamespace = StringArgumentType.getString(context, "dimensionNamespace");
+                                    String dimensionName = StringArgumentType.getString(context, "dimensionName");
+                                    return createDimension(context.getSource(), dimensionNamespace, dimensionName);
+                                })));
+    }
 
-                                    MinecraftServer server = context.getSource().getServer();
-                                    ServerPlayerEntity player = Objects.requireNonNull(context.getSource().getPlayer());
-
-                                    Fantasy fantasy = Fantasy.get(context.getSource().getServer());
-
-                                    RuntimeWorldConfig worldConfig = new RuntimeWorldConfig()
-                                            .setDimensionType(DimensionTypes.OVERWORLD)
-                                            .setDifficulty(Difficulty.NORMAL)
-                                            .setGameRule(GameRules.DO_DAYLIGHT_CYCLE, true)
-                                            .setGenerator(new VoidChunkGenerator(server.getRegistryManager().get(RegistryKeys.BIOME).getEntry(0).get()))
-                                            .setSeed(1234L);
-
-                                    RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(dimensionNamespace, dimensionName), worldConfig);
-                                    ServerWorld world = worldHandle.asWorld();
-                                    world.setBlockState(player.getBlockPos(), Blocks.BEDROCK.getDefaultState());
-
-                                    context.getSource().sendFeedback(() -> Text.literal("Created worldConfig for §c%s§r dimension".formatted(dimensionName)), true);
-                                    return 0;
-                                }))))
-
-                .then(literal("jump")
-                        .then(argument("dimensionNamespace", StringArgumentType.string())
+    private static ArgumentBuilder<ServerCommandSource, ?> registerJumpCommand() {
+        return literal("jump")
+                .then(argument("dimensionNamespace", StringArgumentType.string())
                         .then(argument("dimensionName", StringArgumentType.string())
                                 .requires(source -> source.hasPermissionLevel(2))
                                 .executes(context -> {
-                                    final String dimensionNamespace = StringArgumentType.getString(context, "dimensionNamespace");
-                                    final String dimensionName = StringArgumentType.getString(context, "dimensionName");
+                                    String dimensionNamespace = StringArgumentType.getString(context, "dimensionNamespace");
+                                    String dimensionName = StringArgumentType.getString(context, "dimensionName");
+                                    return jumpToDimension(context.getSource(), dimensionNamespace, dimensionName);
+                                })));
+    }
 
-                                    context.getSource().sendFeedback(() -> Text.literal("Jumping to §c%s:%s§r dimension".formatted(dimensionNamespace, dimensionName)), true);
+    private static int testMod(ServerCommandSource source) {
+        try {
+            ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
+            source.sendFeedback(() -> Text.literal("@%s §cVoidweaver§r is working".formatted(player.getName().getString())), true);
+            LOGGER.info("Test command executed successfully for {}", player.getName().getString());
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Error executing test command", e);
+            return 1; // Indicate command failure
+        }
+    }
 
-                                    // Teleport player to dimension by name using Fantasy
-                                    ServerPlayerEntity player = Objects.requireNonNull(context.getSource().getPlayer());
-                                    MinecraftServer server = context.getSource().getServer();
-                                    Fantasy fantasy = Fantasy.get(server);
+    private static int createDimension(ServerCommandSource source, String namespace, String name) {
+        MinecraftServer server = source.getServer();
+        RuntimeWorldConfig worldConfig = DimensionUtility.createStandardVoidConfig(server);
+        Fantasy fantasy = Fantasy.get(server);
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(namespace, name), worldConfig);
 
-                                    // Get the dimension to teleport to
-                                    RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(dimensionNamespace, dimensionName), new RuntimeWorldConfig()
-                                            .setDimensionType(DimensionTypes.OVERWORLD)
-                                            .setDifficulty(Difficulty.NORMAL)
-                                            .setGameRule(GameRules.DO_DAYLIGHT_CYCLE, true)
-                                            .setGenerator(new VoidChunkGenerator(server.getRegistryManager().get(RegistryKeys.BIOME).getEntry(0).get()))
-                                            .setSeed(1234L)
-                                    );
+        source.sendFeedback(() -> Text.literal("Created new dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
+        ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
 
-                                    // Teleport player to dimension
-                                    player.teleport(worldHandle.asWorld(), player.getX(), player.getY() + 1.5, player.getZ(), player.getYaw(), player.getPitch());
+        ServerWorld world = worldHandle.asWorld();
+        world.setBlockState(player.getBlockPos(), Blocks.BEDROCK.getDefaultState());
+        LOGGER.info("Placed bedrock at %s".formatted(player.getBlockPos()));
+        return 0;
+    }
 
-                                    return 0;
-                                }))))));
+    private static int jumpToDimension(ServerCommandSource source, String namespace, String name) {
+        MinecraftServer server = source.getServer();
+        ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
+        Fantasy fantasy = Fantasy.get(server);
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(namespace, name), DimensionUtility.createStandardVoidConfig(server));
+        player.teleport(worldHandle.asWorld(), player.getX(), player.getY() + 1.5, player.getZ(), player.getYaw(), player.getPitch());
+        LOGGER.info("Teleported player %s to %s,%s,%s".formatted(player.getName().getString(), player.getX(), player.getY(), player.getZ()));
+        source.sendFeedback(() -> Text.literal("Teleported to dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
+        return 0;
+    }
+}
+
+class DimensionUtility {
+
+    public static RuntimeWorldConfig createStandardVoidConfig(MinecraftServer server) {
+        return new RuntimeWorldConfig()
+                .setDimensionType(DimensionTypes.OVERWORLD)
+                .setDifficulty(Difficulty.NORMAL)
+                .setGameRule(GameRules.DO_DAYLIGHT_CYCLE, true)
+                .setGenerator(new VoidChunkGenerator(server.getRegistryManager().get(RegistryKeys.BIOME).getEntry(0).get()))
+                .setSeed(1234L);
     }
 }
