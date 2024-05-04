@@ -1,9 +1,12 @@
 package io.github.aareon.VoidWeaver;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -12,6 +15,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +43,14 @@ public class VoidWeaverCommands {
                 .then(registerJumpCommand())));
     }
 
+    private static boolean isNamespaceBlacklisted(String namespace) {
+        // Retrieve the blacklisted namespaces from the config JsonObject
+        JsonArray blacklistedNamespaces = VoidWeaver.getBlacklistedNamespaces();
+
+        // Check if the provided namespace is blacklisted
+        return blacklistedNamespaces.contains(new JsonPrimitive(namespace));
+    }
+
     private static ArgumentBuilder<ServerCommandSource, ?> registerTestCommand() {
         return literal("test")
                 .requires(source -> source.hasPermissionLevel(2))
@@ -53,6 +65,11 @@ public class VoidWeaverCommands {
                                 .executes(context -> {
                                     String dimensionNamespace = StringArgumentType.getString(context, "dimensionNamespace");
                                     String dimensionName = StringArgumentType.getString(context, "dimensionName");
+
+                                    if (isNamespaceBlacklisted(dimensionNamespace)) {
+                                        context.getSource().sendFeedback(() -> Text.literal("Namespace §6%s§r is blacklisted".formatted(dimensionNamespace)), false);
+                                        return 1;
+                                    }
                                     return createDimension(context.getSource(), dimensionNamespace, dimensionName);
                                 })));
     }
@@ -100,7 +117,16 @@ public class VoidWeaverCommands {
         MinecraftServer server = source.getServer();
         ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
         Fantasy fantasy = Fantasy.get(server);
-        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(namespace, name), DimensionUtility.createStandardVoidConfig(server));
+        Identifier dimensionId = new Identifier(namespace, name);
+
+        RegistryKey<World> dimensionKey = RegistryKey.of(RegistryKeys.WORLD, dimensionId);
+
+        if (!DimensionUtility.doesDimensionExist(server, dimensionKey)) {
+            source.sendFeedback(() -> Text.literal("Dimension §6%s§r:§c%s§r does not exist".formatted(namespace, name)), false);
+            return 1;
+        }
+
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(dimensionId, DimensionUtility.createStandardVoidConfig(server));
         player.teleport(worldHandle.asWorld(), player.getX(), player.getY() + 1.5, player.getZ(), player.getYaw(), player.getPitch());
         LOGGER.info("Teleported player %s to %s,%s,%s".formatted(player.getName().getString(), player.getX(), player.getY(), player.getZ()));
         source.sendFeedback(() -> Text.literal("Teleported to dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
@@ -117,5 +143,18 @@ class DimensionUtility {
                 .setGameRule(GameRules.DO_DAYLIGHT_CYCLE, true)
                 .setGenerator(new VoidChunkGenerator(server.getRegistryManager().get(RegistryKeys.BIOME).getEntry(0).get()))
                 .setSeed(1234L);
+    }
+
+    public static boolean doesDimensionExist(MinecraftServer server, RegistryKey<World> dimensionKey) {
+        try {
+            ServerWorld world = server.getWorld(dimensionKey);
+            if (world != null) {
+                return true; // Dimension exists
+            }
+        } catch (NullPointerException | IllegalArgumentException e) {
+            // Dimension does not exist or other error occurred
+            return false;
+        }
+        return false;
     }
 }
