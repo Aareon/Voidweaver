@@ -90,7 +90,7 @@ public class VoidWeaverCommands {
     private static int testMod(ServerCommandSource source) {
         try {
             String sourceName = source.getDisplayName().getString();
-            source.sendFeedback(() -> Text.literal("@%s §cVoidweaver§r is working".formatted(sourceName)), true);
+            source.sendFeedback(() -> Text.translatable("voidweaver_works"), true);
             LOGGER.info("Test command executed successfully for {}", sourceName);
             return 0;
         } catch (Exception e) {
@@ -99,44 +99,56 @@ public class VoidWeaverCommands {
         }
     }
 
-    private static int createDimension(ServerCommandSource source, String namespace, String name) {
+    private static int createDimension(ServerCommandSource source, String dimensionNamespace, String dimensionName) {
         MinecraftServer server = source.getServer();
         RuntimeWorldConfig worldConfig = DimensionUtility.createStandardVoidConfig(server);
         Fantasy fantasy = Fantasy.get(server);
-        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(namespace, name), worldConfig);
 
-        source.sendFeedback(() -> Text.literal("Created new dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
+        RegistryKey<World> dimensionKey = DimensionUtility.getDimensionKey(dimensionNamespace, dimensionName);
+
+        if (DimensionUtility.doesDimensionExist(server, dimensionKey)) {
+            source.sendFeedback(() -> Text.translatable("dimension_already_exist", dimensionNamespace, dimensionName), true);
+            return 1;
+        }
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(dimensionNamespace, dimensionName), worldConfig);
+
+        source.sendFeedback(() -> Text.translatable("created_dimension", dimensionNamespace, dimensionName), true);
 
         ServerWorld world = worldHandle.asWorld();
         BlockPos sourceBlockPos = BlockPos.ofFloored(source.getPosition());
         world.setBlockState(sourceBlockPos, Blocks.BEDROCK.getDefaultState());
+
         LOGGER.info("Placed bedrock at %s".formatted(sourceBlockPos));
+
         return 0;
     }
 
-    private static int jumpToDimension(ServerCommandSource source, String namespace, String name) {
+    private static int jumpToDimension(ServerCommandSource source, String dimensionNamespace, String dimensionName) {
+        if (source.getPlayer() == null) {
+            LOGGER.error(Text.translatable("server_cant_jump", dimensionNamespace, dimensionName).getString());
+            return 1;
+        }
+
         MinecraftServer server = source.getServer();
         String sourceName = source.getDisplayName().getString();
-        Fantasy fantasy = Fantasy.get(server);
-        Identifier dimensionId = new Identifier(namespace, name);
-        source.getPosition().getX();
 
-        RegistryKey<World> dimensionKey = RegistryKey.of(RegistryKeys.WORLD, dimensionId);
+        Fantasy fantasy = Fantasy.get(server);
+
+        RegistryKey<World> dimensionKey = DimensionUtility.getDimensionKey(dimensionNamespace, dimensionName);
 
         if (!DimensionUtility.doesDimensionExist(server, dimensionKey)) {
-            source.sendFeedback(() -> Text.literal("Dimension §6%s§r:§c%s§r does not exist".formatted(namespace, name)), false);
+            source.sendFeedback(() -> Text.translatable("dimension_not_exist", dimensionNamespace, dimensionName), true);
             return 1;
         }
 
-        if (source.getPlayer() == null) {
-            LOGGER.error("Cannot jump to dimension from server console");
-            return 1;
-        }
-
-        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(dimensionId, DimensionUtility.createStandardVoidConfig(server));
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(
+                DimensionUtility.getDimensionId(dimensionKey),
+                DimensionUtility.createStandardVoidConfig(server));
         source.getPlayer().teleport(worldHandle.asWorld(), source.getPosition().getX(), source.getPosition().getY() + 1.5, source.getPosition().getZ(), 0, 0);
+
         LOGGER.info("Teleported player %s to %s,%s,%s".formatted(sourceName, source.getPosition().getX(), source.getPosition().getY(), source.getPosition().getZ()));
-        source.sendFeedback(() -> Text.literal("Teleported to dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
+        source.sendFeedback(() -> Text.translatable("teleported_to_dimension", dimensionNamespace, dimensionName), true);
+
         return 0;
     }
 }
@@ -150,6 +162,15 @@ class DimensionUtility {
                 .setGameRule(GameRules.DO_DAYLIGHT_CYCLE, true)
                 .setGenerator(new VoidChunkGenerator(server.getRegistryManager().get(RegistryKeys.BIOME).getEntry(0).get()))
                 .setSeed(1234L);
+    }
+
+    public static RegistryKey<World> getDimensionKey(String dimensionNamespace, String dimensionName) {
+        Identifier dimensionId = new Identifier(dimensionNamespace, dimensionName);
+        return RegistryKey.of(RegistryKeys.WORLD, dimensionId);
+    }
+
+    public static Identifier getDimensionId(RegistryKey<World> dimensionKey) {
+        return dimensionKey.getValue();
     }
 
     public static boolean doesDimensionExist(MinecraftServer server, RegistryKey<World> dimensionKey) {
