@@ -1,0 +1,8 @@
+{
+  "voidweaver_works": "Voidweaver works!",
+  "server_cant_jump": "Cannot jump to dimension %s:%s from server console.",
+  "dimension_not_exist": "Dimension §6%s§r:§c%s§r does not exist",
+  "dimension_already_exist": "Dimension §6%s§r:§c%s§r already exists",
+  "created_dimension": "Created new dimension: §6%s§r:§c%s§r",
+  "teleported_to_dimension": "Teleported to dimension: §6%s§r:§c%s§r"
+}
