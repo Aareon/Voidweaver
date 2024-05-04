@@ -13,6 +13,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -88,9 +89,9 @@ public class VoidWeaverCommands {
 
     private static int testMod(ServerCommandSource source) {
         try {
-            ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
-            source.sendFeedback(() -> Text.literal("@%s §cVoidweaver§r is working".formatted(player.getName().getString())), true);
-            LOGGER.info("Test command executed successfully for {}", player.getName().getString());
+            String sourceName = source.getDisplayName().getString();
+            source.sendFeedback(() -> Text.literal("@%s §cVoidweaver§r is working".formatted(sourceName)), true);
+            LOGGER.info("Test command executed successfully for {}", sourceName);
             return 0;
         } catch (Exception e) {
             LOGGER.error("Error executing test command", e);
@@ -105,19 +106,20 @@ public class VoidWeaverCommands {
         RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(namespace, name), worldConfig);
 
         source.sendFeedback(() -> Text.literal("Created new dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
-        ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
 
         ServerWorld world = worldHandle.asWorld();
-        world.setBlockState(player.getBlockPos(), Blocks.BEDROCK.getDefaultState());
-        LOGGER.info("Placed bedrock at %s".formatted(player.getBlockPos()));
+        BlockPos sourceBlockPos = BlockPos.ofFloored(source.getPosition());
+        world.setBlockState(sourceBlockPos, Blocks.BEDROCK.getDefaultState());
+        LOGGER.info("Placed bedrock at %s".formatted(sourceBlockPos));
         return 0;
     }
 
     private static int jumpToDimension(ServerCommandSource source, String namespace, String name) {
         MinecraftServer server = source.getServer();
-        ServerPlayerEntity player = Objects.requireNonNull(source.getPlayer());
+        String sourceName = source.getDisplayName().getString();
         Fantasy fantasy = Fantasy.get(server);
         Identifier dimensionId = new Identifier(namespace, name);
+        source.getPosition().getX();
 
         RegistryKey<World> dimensionKey = RegistryKey.of(RegistryKeys.WORLD, dimensionId);
 
@@ -126,9 +128,14 @@ public class VoidWeaverCommands {
             return 1;
         }
 
+        if (source.getPlayer() == null) {
+            LOGGER.error("Cannot jump to dimension from server console");
+            return 1;
+        }
+
         RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(dimensionId, DimensionUtility.createStandardVoidConfig(server));
-        player.teleport(worldHandle.asWorld(), player.getX(), player.getY() + 1.5, player.getZ(), player.getYaw(), player.getPitch());
-        LOGGER.info("Teleported player %s to %s,%s,%s".formatted(player.getName().getString(), player.getX(), player.getY(), player.getZ()));
+        source.getPlayer().teleport(worldHandle.asWorld(), source.getPosition().getX(), source.getPosition().getY() + 1.5, source.getPosition().getZ(), 0, 0);
+        LOGGER.info("Teleported player %s to %s,%s,%s".formatted(sourceName, source.getPosition().getX(), source.getPosition().getY(), source.getPosition().getZ()));
         source.sendFeedback(() -> Text.literal("Teleported to dimension: §6%s§r:§c%s§r".formatted(namespace, name)), true);
         return 0;
     }
