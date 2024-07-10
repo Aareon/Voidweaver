@@ -34,6 +34,9 @@ dependencies {
 
 	// Fantasy Library
 	include modImplementation ("xyz.nucleoid:fantasy:${project.fantasy_version}")
+
+	// Server Translations API
+	modImplementation include("xyz.nucleoid:server-translations-api:${project.server_translations_api_version}")
 }
 
 processResources {

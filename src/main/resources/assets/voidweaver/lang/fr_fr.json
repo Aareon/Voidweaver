@@ -1,8 +1,0 @@
-{
-  "voidweaver_works": "Voidweaver fonctionne!",
-  "server_cant_jump": "Impossible de passer à la dimension %s:%s à partir de la console du serveur.",
-  "dimension_not_exist": "La dimension §6%s§r:§c%s§r n'existe pas",
-  "dimension_already_exist": "La dimension §6%s§r:§c%s§r existe déjà",
-  "created_dimension": "Création d'une nouvelle dimension: §6%s§r:§c%s§r",
-  "teleported_to_dimension": "Téléporté dans la dimension: §6%s§r:§c%s§r"
-}

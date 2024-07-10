@@ -1,0 +1,8 @@
+{
+  "message.voidweaver.test.success": "Voidweaver работает!",
+  "message.voidweaver.jump.fail.console": "Нельзя прыгнуть в измерение %s:%s из консоли.",
+  "message.voidweaver.jump.fail.not_exist": "Измерение §6%s§r:§c%s§r не существует",
+  "message.voidweaver.jump.success": "Прыжок в измерение §6%s§r:§c%s§r успешен",
+  "message.voidweaver.new.fail.exist": "Измерение §6%s§r:§c%s§r уже существует",
+  "message.voidweaver.new.success": "Измерение §6%s§r:§c%s§r создано"
+}
