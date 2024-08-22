@@ -90,7 +90,7 @@ public class VoidWeaverCommands {
     private static int testMod(ServerCommandSource source) {
         try {
             String sourceName = source.getDisplayName().getString();
-            source.sendFeedback(() -> Text.translatable("voidweaver_works"), true);
+            source.sendFeedback(() -> Text.translatable("message.voidweaver.test.success"), true);
             LOGGER.info("Test command executed successfully for {}", sourceName);
             return 0;
         } catch (Exception e) {
@@ -107,12 +107,12 @@ public class VoidWeaverCommands {
         RegistryKey<World> dimensionKey = DimensionUtility.getDimensionKey(dimensionNamespace, dimensionName);
 
         if (DimensionUtility.doesDimensionExist(server, dimensionKey)) {
-            source.sendFeedback(() -> Text.translatable("dimension_already_exist", dimensionNamespace, dimensionName), true);
+            source.sendFeedback(() -> Text.translatable("message.voidweaver.new.fail.exist", dimensionNamespace, dimensionName), true);
             return 1;
         }
-        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(new Identifier(dimensionNamespace, dimensionName), worldConfig);
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(Identifier.of(dimensionNamespace, dimensionName), worldConfig);
 
-        source.sendFeedback(() -> Text.translatable("created_dimension", dimensionNamespace, dimensionName), true);
+        source.sendFeedback(() -> Text.translatable("message.voidweaver.new.success", dimensionNamespace, dimensionName), true);
 
         ServerWorld world = worldHandle.asWorld();
         BlockPos sourceBlockPos = BlockPos.ofFloored(source.getPosition());
@@ -125,7 +125,7 @@ public class VoidWeaverCommands {
 
     private static int jumpToDimension(ServerCommandSource source, String dimensionNamespace, String dimensionName) {
         if (source.getPlayer() == null) {
-            LOGGER.error(Text.translatable("server_cant_jump", dimensionNamespace, dimensionName).getString());
+            LOGGER.error(Text.translatable("message.voidweaver.jump.fail.console", dimensionNamespace, dimensionName).getString());
             return 1;
         }
 
@@ -137,7 +137,7 @@ public class VoidWeaverCommands {
         RegistryKey<World> dimensionKey = DimensionUtility.getDimensionKey(dimensionNamespace, dimensionName);
 
         if (!DimensionUtility.doesDimensionExist(server, dimensionKey)) {
-            source.sendFeedback(() -> Text.translatable("dimension_not_exist", dimensionNamespace, dimensionName), true);
+            source.sendFeedback(() -> Text.translatable("message.voidweaver.jump.fail.not_exist", dimensionNamespace, dimensionName), true);
             return 1;
         }
 
@@ -147,7 +147,7 @@ public class VoidWeaverCommands {
         source.getPlayer().teleport(worldHandle.asWorld(), source.getPosition().getX(), source.getPosition().getY() + 1.5, source.getPosition().getZ(), 0, 0);
 
         LOGGER.info("Teleported player %s to %s,%s,%s".formatted(sourceName, source.getPosition().getX(), source.getPosition().getY(), source.getPosition().getZ()));
-        source.sendFeedback(() -> Text.translatable("teleported_to_dimension", dimensionNamespace, dimensionName), true);
+        source.sendFeedback(() -> Text.translatable("message.voidweaver.jump.success", dimensionNamespace, dimensionName), true);
 
         return 0;
     }
@@ -165,7 +165,7 @@ class DimensionUtility {
     }
 
     public static RegistryKey<World> getDimensionKey(String dimensionNamespace, String dimensionName) {
-        Identifier dimensionId = new Identifier(dimensionNamespace, dimensionName);
+        Identifier dimensionId = Identifier.of(dimensionNamespace, dimensionName);
         return RegistryKey.of(RegistryKeys.WORLD, dimensionId);
     }
 

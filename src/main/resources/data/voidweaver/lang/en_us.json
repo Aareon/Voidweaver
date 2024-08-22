@@ -1,0 +1,8 @@
+{
+  "message.voidweaver.test.success": "Voidweaver works!",
+  "message.voidweaver.jump.fail.console": "Cannot jump to dimension %s:%s from server console.",
+  "message.voidweaver.jump.fail.not_exist": "Dimension §6%s§r:§c%s§r does not exist",
+  "message.voidweaver.jump.success": "Teleported to dimension: §6%s§r:§c%s§r",
+  "message.voidweaver.new.fail.exist": "Dimension §6%s§r:§c%s§r already exists",
+  "message.voidweaver.new.success": "Created new dimension: §6%s§r:§c%s§r"
+}
